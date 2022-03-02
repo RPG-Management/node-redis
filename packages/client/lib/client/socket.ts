@@ -22,6 +22,7 @@ export interface RedisSocketOptions extends RedisSocketCommonOptions, RedisTlsSo
   host?: string;
   port?: number;
   throwErrors?: boolean;
+  alwaysReconnect?: boolean;
 }
 
 interface CreateSocketReturn<T> {
@@ -46,8 +47,6 @@ export default class RedisSocket extends EventEmitter {
 
     this.#initiator = initiator;
     this.#options = RedisSocket.#initiateOptions(options);
-
-    console.log(`Initializing RedisSocket with options: ${JSON.stringify(this.#options)}`);
   }
 
   get isOpen(): boolean {
@@ -154,13 +153,11 @@ export default class RedisSocket extends EventEmitter {
       this.#writableNeedDrain = false;
     } catch (err) {
       this.#isOpen = false;
-      console.log(`Error: ${err} (${this.#options.throwErrors})`);
       this.emit("error", err);
       this.emit("end");
 
-      if (this.#options.throwErrors) {
-        throw err;
-      }
+      if (this.#options.throwErrors) throw err;
+      if (this.#options.alwaysReconnect) await this.#connect();
     }
 
     if (!this.#isOpen) {
@@ -184,9 +181,8 @@ export default class RedisSocket extends EventEmitter {
         this.emit("error", err);
         this.emit("end");
 
-        if (this.#options.throwErrors) {
-          throw err;
-        }
+        if (this.#options.throwErrors) throw err;
+        if (this.#options.alwaysReconnect) await this.#connect();
       }
 
       if (!this.#isOpen) return;
@@ -249,6 +245,11 @@ export default class RedisSocket extends EventEmitter {
               if (!hadError && this.#isOpen && this.#socket === socket) {
                 this.emit("error", "Connection closed");
                 if (this.#options.throwErrors) this.#onSocketError(new SocketClosedUnexpectedlyError());
+                if (this.#options.alwaysReconnect) {
+                  this.#connect().catch(() => {
+                    /*ignore*/
+                  });
+                }
               }
             })
             .on("drain", () => {
@@ -283,7 +284,7 @@ export default class RedisSocket extends EventEmitter {
     this.emit("error", err);
 
     this.#connect(true).catch(() => {
-      // the error was already emitted, silently ignore it
+      /*ignore*/
     });
   }
 }
