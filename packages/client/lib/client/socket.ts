@@ -217,7 +217,7 @@ export default class RedisSocket extends EventEmitter {
 
       this.emit("error", err);
       await promiseTimeout(retryIn as number);
-      return this.#retryConnection(retries + 1);
+      return await this.#retryConnection(retries + 1);
     }
   }
 
@@ -253,6 +253,7 @@ export default class RedisSocket extends EventEmitter {
             })
             .on("data", (data: Buffer) => this.emit("data", data));
 
+          console.log(`Redis: Reconnected`);
           this.emit("connect");
           resolve(socket);
         });
