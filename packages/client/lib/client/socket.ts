@@ -198,6 +198,8 @@ export default class RedisSocket extends EventEmitter {
   }
 
   async #retryConnection(retries: number, hadError?: boolean): Promise<net.Socket | tls.TLSSocket> {
+    console.log(`Redis: Retrying connection (${retries})`);
+
     if (retries > 0 || hadError) {
       this.emit("reconnect");
     }
@@ -205,6 +207,8 @@ export default class RedisSocket extends EventEmitter {
     try {
       return await this.#createSocket();
     } catch (err) {
+      console.log(`Caught error in retryConnection: ${err}`);
+
       if (!this.#isOpen && this.#options.throwErrors) {
         throw err;
       }
@@ -217,7 +221,7 @@ export default class RedisSocket extends EventEmitter {
 
       this.emit("error", err);
       await promiseTimeout(retryIn as number);
-      return this.#retryConnection(retries + 1);
+      return await this.#retryConnection(retries + 1);
     }
   }
 
@@ -253,6 +257,7 @@ export default class RedisSocket extends EventEmitter {
             })
             .on("data", (data: Buffer) => this.emit("data", data));
 
+          console.log(`Redis: Reconnected`);
           this.emit("connect");
           resolve(socket);
         });
