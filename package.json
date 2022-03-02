@@ -24,10 +24,11 @@
   },
   "devDependencies": {
     "@tsconfig/node12": "^1.0.9",
+    "@types/yallist": "^4.0.1",
     "gh-pages": "^3.2.3",
+    "prettier": "^2.3.2",
     "release-it": "^14.12.1",
-    "typescript": "^4.5.4",
-    "prettier": "^2.3.2"
+    "typescript": "^4.5.4"
   },
   "repository": {
     "type": "git",
