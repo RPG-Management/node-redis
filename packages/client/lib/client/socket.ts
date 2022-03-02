@@ -21,7 +21,7 @@ export interface RedisTlsSocketOptions extends tls.ConnectionOptions {
 export interface RedisSocketOptions extends RedisSocketCommonOptions, RedisTlsSocketOptions {
   host?: string;
   port?: number;
-  throwErrors?: true;
+  throwErrors?: boolean;
 }
 
 interface CreateSocketReturn<T> {
@@ -46,6 +46,8 @@ export default class RedisSocket extends EventEmitter {
 
     this.#initiator = initiator;
     this.#options = RedisSocket.#initiateOptions(options);
+
+    console.log(`Initializing RedisSocket with options: ${JSON.stringify(this.#options)}`);
   }
 
   get isOpen(): boolean {
@@ -145,6 +147,7 @@ export default class RedisSocket extends EventEmitter {
       this.#writableNeedDrain = false;
     } catch (err) {
       this.#isOpen = false;
+      console.log(`Error: ${err} (${this.#options.throwErrors})`);
       this.emit("error", err);
       this.emit("end");
 
