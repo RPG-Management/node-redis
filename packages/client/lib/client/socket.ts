@@ -95,8 +95,9 @@ export default class RedisSocket extends EventEmitter {
   }
 
   writeCommand(args: RedisCommandArguments): void {
-    if (!this.#socket && this.#options.throwErrors) {
-      throw new ClientClosedError();
+    if (!this.#socket) {
+      this.emit("error", "Client closed");
+      if (this.#options.throwErrors) throw new ClientClosedError();
     }
 
     for (const toWrite of encodeCommand(args)) {
@@ -105,8 +106,9 @@ export default class RedisSocket extends EventEmitter {
   }
 
   disconnect(): void {
-    if (!this.#socket && this.#options.throwErrors) {
-      throw new ClientClosedError();
+    if (!this.#socket) {
+      this.emit("error", "Client closed");
+      if (this.#options.throwErrors) throw new ClientClosedError();
     } else {
       this.#isOpen = this.#isReady = false;
     }
@@ -117,8 +119,9 @@ export default class RedisSocket extends EventEmitter {
   }
 
   async quit(fn: () => Promise<unknown>): Promise<void> {
-    if (!this.#isOpen && this.#options.throwErrors) {
-      throw new ClientClosedError();
+    if (!this.#isOpen) {
+      this.emit("error", "Client closed");
+      if (this.#options.throwErrors) throw new ClientClosedError();
     }
 
     this.#isOpen = false;
@@ -137,8 +140,8 @@ export default class RedisSocket extends EventEmitter {
     queueMicrotask(() => {
       try {
         this.#socket?.uncork();
-      } catch (error) {
-        // ignore
+      } catch {
+        /*ignore*/
       }
       this.#isCorked = false;
     });
@@ -207,8 +210,9 @@ export default class RedisSocket extends EventEmitter {
       }
 
       const retryIn = (this.#options?.reconnectStrategy ?? RedisSocket.#defaultReconnectStrategy)(retries);
-      if (retryIn instanceof Error && this.#options.throwErrors) {
-        throw new ReconnectStrategyError(retryIn, err);
+      if (retryIn instanceof Error) {
+        this.emit("error", err);
+        if (this.#options.throwErrors) throw new ReconnectStrategyError(retryIn, err);
       }
 
       this.emit("error", err);
@@ -222,9 +226,10 @@ export default class RedisSocket extends EventEmitter {
       const { connectEvent, socket } = RedisSocket.#isTlsSocket(this.#options) ? this.#createTlsSocket() : this.#createNetSocket();
 
       if (this.#options.connectTimeout) {
-        socket.setTimeout(this.#options.connectTimeout, () =>
-          this.#options.throwErrors ? socket.destroy(new ConnectionTimeoutError()) : socket.end()
-        );
+        socket.setTimeout(this.#options.connectTimeout, () => {
+          this.emit("error", "Connection timeout");
+          return socket.destroy(this.#options.throwErrors ? new ConnectionTimeoutError() : undefined);
+        });
       }
 
       socket
@@ -237,8 +242,9 @@ export default class RedisSocket extends EventEmitter {
             .off("error", reject)
             .once("error", (err: Error) => this.#onSocketError(err))
             .once("close", (hadError) => {
-              if (!hadError && this.#isOpen && this.#socket === socket && this.#options.throwErrors) {
-                this.#onSocketError(new SocketClosedUnexpectedlyError());
+              if (!hadError && this.#isOpen && this.#socket === socket) {
+                this.emit("error", "Connection closed");
+                if (this.#options.throwErrors) this.#onSocketError(new SocketClosedUnexpectedlyError());
               }
             })
             .on("drain", () => {
