@@ -21,7 +21,7 @@ export interface RedisTlsSocketOptions extends tls.ConnectionOptions {
 export interface RedisSocketOptions extends RedisSocketCommonOptions, RedisTlsSocketOptions {
   host?: string;
   port?: number;
-  throwErrors?: true;
+  throwErrors?: boolean;
 }
 
 interface CreateSocketReturn<T> {
@@ -46,6 +46,8 @@ export default class RedisSocket extends EventEmitter {
 
     this.#initiator = initiator;
     this.#options = RedisSocket.#initiateOptions(options);
+
+    console.log(`Initializing RedisSocket with options: ${JSON.stringify(this.#options)}`);
   }
 
   get isOpen(): boolean {
@@ -145,6 +147,7 @@ export default class RedisSocket extends EventEmitter {
       this.#writableNeedDrain = false;
     } catch (err) {
       this.#isOpen = false;
+      console.log(`Error: ${err} (${this.#options.throwErrors})`);
       this.emit("error", err);
       this.emit("end");
 
@@ -215,7 +218,9 @@ export default class RedisSocket extends EventEmitter {
       const { connectEvent, socket } = RedisSocket.#isTlsSocket(this.#options) ? this.#createTlsSocket() : this.#createNetSocket();
 
       if (this.#options.connectTimeout) {
-        socket.setTimeout(this.#options.connectTimeout, () => socket.destroy(new ConnectionTimeoutError()));
+        socket.setTimeout(this.#options.connectTimeout, () =>
+          this.#options.throwErrors ? socket.destroy(new ConnectionTimeoutError()) : socket.end()
+        );
       }
 
       socket
@@ -228,7 +233,7 @@ export default class RedisSocket extends EventEmitter {
             .off("error", reject)
             .once("error", (err: Error) => this.#onSocketError(err))
             .once("close", (hadError) => {
-              if (!hadError && this.#isOpen && this.#socket === socket) {
+              if (!hadError && this.#isOpen && this.#socket === socket && this.#options.throwErrors) {
                 this.#onSocketError(new SocketClosedUnexpectedlyError());
               }
             })
