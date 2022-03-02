@@ -199,7 +199,7 @@ export default class RedisSocket extends EventEmitter {
 
   async #retryConnection(retries: number, hadError?: boolean): Promise<net.Socket | tls.TLSSocket> {
     if (retries > 0 || hadError) {
-      this.emit("reconnecting");
+      this.emit("reconnect");
     }
 
     try {
@@ -253,6 +253,7 @@ export default class RedisSocket extends EventEmitter {
             })
             .on("data", (data: Buffer) => this.emit("data", data));
 
+          this.emit("connect");
           resolve(socket);
         });
     });
