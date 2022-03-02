@@ -95,7 +95,7 @@ export default class RedisSocket extends EventEmitter {
 
   writeCommand(args: RedisCommandArguments): void {
     if (!this.#socket) {
-      this.emit("error", "Client closed");
+      this.emit("error", "Cannot write (connection closed)");
       if (this.#options.throwErrors) throw new ClientClosedError();
     }
 
@@ -106,7 +106,7 @@ export default class RedisSocket extends EventEmitter {
 
   disconnect(): void {
     if (!this.#socket) {
-      this.emit("error", "Client closed");
+      this.emit("error", "Cannot disconnect (client closed)");
       if (this.#options.throwErrors) throw new ClientClosedError();
     } else {
       this.#isOpen = this.#isReady = false;
@@ -119,7 +119,7 @@ export default class RedisSocket extends EventEmitter {
 
   async quit(fn: () => Promise<unknown>): Promise<void> {
     if (!this.#isOpen) {
-      this.emit("error", "Client closed");
+      this.emit("error", "Cannot quit (client closed)");
       if (this.#options.throwErrors) throw new ClientClosedError();
     }
 
@@ -211,7 +211,7 @@ export default class RedisSocket extends EventEmitter {
 
       const retryIn = (this.#options?.reconnectStrategy ?? RedisSocket.#defaultReconnectStrategy)(retries);
       if (retryIn instanceof Error) {
-        this.emit("error", err);
+        this.emit("error", `Cannot reconnect with strategy (${err})`);
         if (this.#options.throwErrors) throw new ReconnectStrategyError(retryIn, err);
       }
 
@@ -243,7 +243,7 @@ export default class RedisSocket extends EventEmitter {
             .once("error", (err: Error) => this.#onSocketError(err))
             .once("close", (hadError) => {
               if (!hadError && this.#isOpen && this.#socket === socket) {
-                this.emit("error", "Connection closed");
+                this.emit("error", "Socket connection closed unexpectedly");
                 if (this.#options.throwErrors) this.#onSocketError(new SocketClosedUnexpectedlyError());
                 if (this.#options.alwaysReconnect) {
                   this.#connect().catch(() => {
