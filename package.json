@@ -1,7 +1,7 @@
 {
   "name": "@rpg-management/node-redis",
   "description": "A modern, high performance Redis client",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": false,
   "license": "MIT",
   "main": "./dist/index.js",
@@ -14,14 +14,12 @@
   ],
   "scripts": {
     "build:client": "npm run build -w ./packages/client",
-    "build:modules": "find ./packages -mindepth 1 -maxdepth 1 -type d ! -name 'client' ! -name 'test-utils' -exec npm run build -w {} \\;",
     "build": "tsc",
-    "build-all": "npm run build:client && npm run build:modules && npm run build",
+    "build-all": "npm run build:client && npm run build",
     "documentation": "npm run documentation -ws --if-present"
   },
   "dependencies": {
-    "@rpg-management/node-redis-client": "1.0.0",
-    "@rpg-management/node-redis-json": "1.0.1"
+    "@rpg-management/node-redis-client": "1.0.0"
   },
   "devDependencies": {
     "@tsconfig/node12": "^1.0.9",

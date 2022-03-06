@@ -8,14 +8,10 @@ import {
   RedisModules,
   RedisScripts,
 } from "@rpg-management/node-redis-client";
-import RedisJSON from "@rpg-management/node-redis-json";
 
 export * from "@rpg-management/node-redis-client";
-export * from "@rpg-management/node-redis-json";
 
-const modules = {
-  json: RedisJSON,
-};
+const modules = {};
 
 export type RedisDefaultModules = typeof modules;
 
