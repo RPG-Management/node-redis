@@ -22,7 +22,6 @@ export interface RedisSocketOptions extends RedisSocketCommonOptions, RedisTlsSo
   host?: string;
   port?: number;
   throwErrors?: boolean;
-  alwaysReconnect?: boolean;
 }
 
 interface CreateSocketReturn<T> {
@@ -86,10 +85,6 @@ export default class RedisSocket extends EventEmitter {
   }
 
   async connect(): Promise<void> {
-    if (this.#isOpen && this.#options.throwErrors) {
-      throw new Error("Socket already opened");
-    }
-
     return this.#connect();
   }
 
@@ -157,7 +152,6 @@ export default class RedisSocket extends EventEmitter {
       this.emit("end");
 
       if (this.#options.throwErrors) throw err;
-      if (this.#options.alwaysReconnect) await this.#connect();
     }
 
     if (!this.#isOpen) {
@@ -182,7 +176,6 @@ export default class RedisSocket extends EventEmitter {
         this.emit("end");
 
         if (this.#options.throwErrors) throw err;
-        if (this.#options.alwaysReconnect) await this.#connect();
       }
 
       if (!this.#isOpen) return;
@@ -194,17 +187,15 @@ export default class RedisSocket extends EventEmitter {
   }
 
   async #retryConnection(retries: number, hadError?: boolean): Promise<net.Socket | tls.TLSSocket> {
-    if (retries % 100 === 0) console.log(`Redis: Retrying connection (${retries})`);
-
     if (retries > 0 || hadError) {
       this.emit("reconnect", retries);
     }
 
     try {
-      return await this.#createSocket();
+      const socket = await this.#createSocket();
+      if (!socket) throw new Error("Socket creation failed");
+      return socket;
     } catch (err) {
-      console.log(`Caught error in retryConnection: ${err}`);
-
       if (!this.#isOpen && this.#options.throwErrors) {
         throw err;
       }
@@ -228,6 +219,7 @@ export default class RedisSocket extends EventEmitter {
       if (this.#options.connectTimeout) {
         socket.setTimeout(this.#options.connectTimeout, () => {
           this.emit("error", "Connection timeout");
+          this.emit("end");
           return socket.destroy(this.#options.throwErrors ? new ConnectionTimeoutError() : undefined);
         });
       }
@@ -240,22 +232,14 @@ export default class RedisSocket extends EventEmitter {
           socket
             .setTimeout(0)
             .off("error", reject)
-            .once("error", (err: Error) => this.#onSocketError(err))
+            .once("error", (err: Error) => {
+              if (this.#options.throwErrors) this.#onSocketError(err);
+            })
             .once("close", (hadError) => {
               if (!hadError && this.#isOpen && this.#socket === socket) {
-                console.log(`1`);
                 this.emit("error", "Socket connection closed unexpectedly");
-                console.log(`2`);
+                this.emit("end");
                 if (this.#options.throwErrors) this.#onSocketError(new SocketClosedUnexpectedlyError());
-                console.log(`3`);
-                if (this.#options.alwaysReconnect) {
-                  console.log(`4`);
-                  this.#connect().catch(() => {
-                    /*ignore*/
-                    console.log(`6`);
-                  });
-                  console.log(`5`);
-                }
               }
             })
             .on("drain", () => {
@@ -264,7 +248,6 @@ export default class RedisSocket extends EventEmitter {
             })
             .on("data", (data: Buffer) => this.emit("data", data));
 
-          console.log(`Redis: Reconnected`);
           resolve(socket);
         });
     });
