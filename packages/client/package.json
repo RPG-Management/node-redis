@@ -1,6 +1,6 @@
 {
-  "name": "@node-redis/client",
-  "version": "1.0.4",
+  "name": "@rpg-management/node-redis-client",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

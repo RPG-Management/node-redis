@@ -1,7 +1,7 @@
 {
   "name": "@rpg-management/node-redis",
   "description": "A modern, high performance Redis client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "license": "MIT",
   "main": "./dist/index.js",
@@ -20,8 +20,8 @@
     "documentation": "npm run documentation -ws --if-present"
   },
   "dependencies": {
-    "@node-redis/client": "1.0.4",
-    "@node-redis/json": "1.0.2"
+    "@rpg-management/node-redis-client": "1.0.0",
+    "@rpg-management/node-redis-json": "1.0.1"
   },
   "devDependencies": {
     "@tsconfig/node12": "^1.0.9",
