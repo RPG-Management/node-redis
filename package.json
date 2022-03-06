@@ -1,7 +1,8 @@
 {
   "name": "@rpg-management/node-redis",
   "description": "A modern, high performance Redis client",
-  "version": "4.0.4",
+  "version": "1.0.0",
+  "private": false,
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
